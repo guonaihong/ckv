@@ -39,14 +39,14 @@ int kvs_ev_kqueue_add(kvs_ev_t *e, int fd, int mask) {
     kvs_ev_kqueue_t *ev = (kvs_ev_kqueue_t *)e->ev;
 
     if (mask & KVS_EV_READ) {
-        EV_SET(&event, fd, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 5000, 0);
+        EV_SET(&event, fd, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, 0);
         if (kevent(ev->kq, &event, 1, NULL, 0, NULL) == -1) {
             return -1;
         }
     }
 
     if (mask & KVS_EV_WRITE) {
-        EV_SET(&event, fd, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 5000, 0);
+        EV_SET(&event, fd, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, 0);
         if (kevent(ev->kq, &event, 1, NULL, 0, NULL) == -1) {
             return -1;
         }
@@ -59,14 +59,14 @@ int kvs_ev_kqueue_del(kvs_ev_t *e, int fd, int mask) {
     kvs_ev_kqueue_t *ev = (kvs_ev_kqueue_t *)e->ev;
 
     if (mask & KVS_EV_READ) {
-        EV_SET(&event, fd, EVFILT_READ, EV_DELETE, 0, 5000, 0);
+        EV_SET(&event, fd, EVFILT_READ, EV_DELETE, 0, 0, 0);
         if (kevent(ev->kq, &event, 1, NULL, 0, NULL) == -1) {
             return -1;
         }
     }
 
     if (mask & KVS_EV_WRITE) {
-        EV_SET(&event, fd, EVFILT_READ, EV_DELETE, 0, 5000, 0);
+        EV_SET(&event, fd, EVFILT_WRITE, EV_DELETE, 0, 0, 0);
         if (kevent(ev->kq, &event, 1, NULL, 0, NULL) == -1) {
             return -1;
         }
