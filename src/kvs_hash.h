@@ -6,6 +6,8 @@ extern "C" {
 #endif
 
 #define KVS_INIT_HASH_SIZE 8
+#define KVS_EXPAND         1
+#define KVS_UNUSED        -1
     
 typedef struct kvs_hash_node_t {
     const void             *key;
@@ -23,10 +25,9 @@ typedef struct kvs_hash_bucket_t {
 
 typedef struct kvs_hash_t {
     kvs_hash_bucket_t *buckets;
-    kvs_hash_bucket_t *oldbuckets;
-
+    kvs_hash_bucket_t *expand_buckets;
+    int index;
     unsigned int (*hash_func)(const unsigned char *s, int *klen);
-    unsigned expand;
 } kvs_hash_t;
 
 kvs_hash_t *kvs_hash_new(int hint);
