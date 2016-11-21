@@ -1,6 +1,7 @@
 #ifndef __KVS_EV_H
 #define __KVS_EV_H
 
+#include <sys/select.h>
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -8,13 +9,13 @@ extern "C" {
 #define KVS_EV_READ  0x01
 #define KVS_EV_WRITE 0x02
 
-typedef struct kvs_ev_vtable_tkvs_ev_vtable_t;
+typedef struct kvs_ev_vtable_t kvs_ev_vtable_t;
 
 typedef struct kvs_ev_t {
     int           maxfd;
     void         *ev;
     int           size;
-    char         *api;
+    char         *api_name;
     kvs_ev_vtable_t*vtable;
 } kvs_ev_t;
 

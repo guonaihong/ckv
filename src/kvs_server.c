@@ -1,7 +1,7 @@
 #include "kvs_ev.h"
 
 int main() {
-    void *ev = kvs_ev_api_new(100, "epoll");
+    kvs_ev_t *ev = kvs_ev_api_new(100, "kqueue");
 
     // accept
     return 0;

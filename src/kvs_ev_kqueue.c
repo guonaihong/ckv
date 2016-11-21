@@ -1,12 +1,17 @@
+#include <stdlib.h>
+#include <unistd.h>
 #include "kvs_ev.h"
+#include <sys/types.h>
 #include <sys/event.h>
+#include <sys/time.h>
 
-typedef kvs_ev_kqueue_t {
+typedef struct kvs_ev_kqueue_t {
     int kq;
-    struct event events;
-};
+    struct kevent *events;
+} kvs_ev_kqueue_t;
 
 void *kvs_ev_kqueue_new(int size) {
+    kvs_ev_kqueue_t *ev;
     ev = malloc(sizeof(kvs_ev_kqueue_t));
     if (ev == NULL) {
         return NULL;
@@ -20,14 +25,14 @@ void *kvs_ev_kqueue_new(int size) {
     return ev;
 fail:
     free(ev);
-    return NULL
+    return NULL;
 }
 
 int kvs_ev_kqueue_resize(kvs_ev_t *e, int size) {
     kvs_ev_kqueue_t *ev = (kvs_ev_kqueue_t *)e->ev;
-    struct event    *new_events = NULL;
+    struct kevent    *new_events = NULL;
 
-    if ((new_events = realloc(ev->events, size)) == NULL) {
+    if ((new_events = realloc((void *)ev->events, size)) == NULL) {
         return -1;
     }
     ev->events = new_events;
@@ -76,6 +81,7 @@ int kvs_ev_kqueue_del(kvs_ev_t *e, int fd, int mask) {
 
 int kvs_ev_kqueue_cycle(kvs_ev_t *e, struct timeval *tv) {
     ;
+    return 0;
 }
 
 void kvs_ev_kqueue_free(kvs_ev_t *e) {
