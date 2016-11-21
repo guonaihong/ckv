@@ -186,7 +186,7 @@ kvs_hash_node_t **kvs_hash_find_core(kvs_hash_t *h,
     kvs_hash_bucket_t *buckets = h->buckets;
 
 
-    for (i = 2;i--;) {
+    for (i = 2; i--; ) {
         hv = h->hash_func(k, (int *)klen) & buckets->mask;
         if (hash) {
             *hash = hv;
@@ -211,8 +211,19 @@ kvs_hash_node_t **kvs_hash_find_core(kvs_hash_t *h,
     return NULL;
 }
 
-// TODO
-int kvs_hash_resize() {
+int kvs_hash_resize(kvs_hash_t *h, int new_size) {
+    int hint;
+
+    if (h->index != KVS_UNUSED) {
+        return -1;
+    }
+
+    hint = kvs_hash_next_power(new_size);
+    h->expand_buckets = kvs_hash_bucket_new(hint);
+#if 0
+    printf("old bucket use(%d) size(%d): new bucket size is %d: hint is %d new buckets is %d\n",
+            h->buckets->use, h->buckets->size, h->expand_buckets->size, hint, h->expand_buckets->mask);
+#endif
     return 0;
 }
 
@@ -232,17 +243,11 @@ int kvs_hash_add(kvs_hash_t *h, const void *k, size_t klen, void **v) {
     kvs_hash_node_t  *newp;
     kvs_hash_node_t **pp;
 
-    int               hint = 0;
     if (kvs_hash_need_expand(h)) {
         assert(h->expand_buckets == NULL);
 
-        hint = kvs_hash_next_power(h->buckets->use * 2);
-        h->expand_buckets = kvs_hash_bucket_new(hint);
+        kvs_hash_resize(h, h->buckets->size * 2);
 
-#if 0
-        printf("old bucket use(%d) size(%d): new bucket size is %d: hint is %d new buckets is %d\n",
-                h->buckets->use, h->buckets->size, h->expand_buckets->size, hint, h->expand_buckets->mask);
-#endif
 
     }
 
@@ -330,6 +335,7 @@ void kvs_hash_free(kvs_hash_t *h, void (*myfree)(void *)) {
     free(h);
 }
 
+#if 0
 void myfree(void *v) {
     free(v);
 }
@@ -450,3 +456,4 @@ int main() {
     test_hash_expand();
     return 0;
 }
+#endif

@@ -21,7 +21,7 @@ typedef struct kvs_ev_select {
     int    maxfd;
 } kvs_ev_select_t;
 
-static int kvs_select_new(kvs_ev_t *ev) {
+static int kvs_ev_select_new(kvs_ev_t *ev) {
     kvs_ev_select_t *ev = NULL;
 
     if (ev == NULL) {
@@ -38,7 +38,7 @@ static int kvs_select_new(kvs_ev_t *ev) {
     return 0;
 }
 
-static int kvs_select_add(kvs_ev_t *ev, int fd, int mask) {
+static int kvs_ev_select_add(kvs_ev_t *ev, int fd, int mask) {
     kvs_ev_select_t *ev_select;
 
     ev_select = (kvs_ev_select_t *)ev->ev_data;
@@ -53,7 +53,7 @@ static int kvs_select_add(kvs_ev_t *ev, int fd, int mask) {
     return 0;
 }
 
-static int kvs_select_del(kvs_ev_t *ev, int fd, int mask) {
+static int kvs_ev_select_del(kvs_ev_t *ev, int fd, int mask) {
     kvs_ev_select_t *ev_select;
 
     ev_select = (kvs_ev_select_t *)ev->ev_data;
@@ -68,7 +68,7 @@ static int kvs_select_del(kvs_ev_t *ev, int fd, int mask) {
     return 0;
 }
 
-static int kvs_select_cycle(kvs_ev_t *ev, struct timeval *tv) {
+static int kvs_ev_select_cycle(kvs_ev_t *ev, struct timeval *tv) {
     kvs_ev_select_t *ev_select;
     int              rv, i;
 
@@ -86,7 +86,11 @@ static int kvs_select_cycle(kvs_ev_t *ev, struct timeval *tv) {
     return rv;
 }
 
-static void kvs_select_free(kvs_ev_t *ev) {
+static int kvs_ev_select_resize(kvs_ev_t *ev) {
+    return 0;
+}
+
+static void kvs_ev_select_free(kvs_ev_t *ev) {
 #if 0
     kvs_ev_select_t *ev_select;
 
@@ -94,3 +98,12 @@ static void kvs_select_free(kvs_ev_t *ev) {
 #endif
     free(ev->ev_data);
 }
+
+const kvs_ev_vtable_t kvs_ev_select = {
+    kvs_ev_select_new,
+    kvs_ev_select_add,
+    kvs_ev_select_del,
+    kvs_ev_select_resize,
+    kvs_ev_select_cycle,
+    kvs_ev_select_free,
+};

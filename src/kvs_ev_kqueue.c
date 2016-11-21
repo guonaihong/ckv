@@ -84,3 +84,12 @@ void kvs_ev_kqueue_free(kvs_ev_t *e) {
     close(ev->kq);
     free(ev);
 }
+
+const kvs_ev_vtable_t kvs_ev_kqueue = {
+    kvs_ev_kqueue_new,
+    kvs_ev_kqueue_add,
+    kvs_ev_kqueue_del,
+    kvs_ev_kqueue_resize,
+    kvs_ev_kqueue_cycle,
+    kvs_ev_kqueue_free,
+};

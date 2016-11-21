@@ -11,6 +11,7 @@ void *kvs_ev_epoll_new(int size) {
     if (ev == NULL) {
         return NULL;
     }
+    ev->vtable = NULL;
 
     if (ev->ep = epoll_create(size) == -1) {
         goto fail;
@@ -82,3 +83,12 @@ void kvs_ev_epoll_free(kvs_ev_t *e) {
     close(ev->ep);
     free(ev);
 }
+
+const kvs_ev_vtable_t kvs_ev_epoll = {
+    kvs_ev_epoll_new,
+    kvs_ev_epoll_add,
+    kvs_ev_epoll_del,
+    kvs_ev_epoll_resize,
+    kvs_ev_epoll_cycle,
+    kvs_ev_epoll_free,
+};
