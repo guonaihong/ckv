@@ -200,12 +200,6 @@ void kvs_ev_stop(kvs_ev_t *e) {
     e->stop = 1;
 }
 
-void kvs_ev_free(kvs_ev_t *e) {
-    free(e->action);
-    free(e->active);
-    kvs_ev_free_core(e);
-}
-
 int kvs_ev_cycle(kvs_ev_t *e, struct timeval *tv) {
     int              i, n, fd, mask;
     kvs_ev_action_t *action;
@@ -226,4 +220,10 @@ int kvs_ev_cycle(kvs_ev_t *e, struct timeval *tv) {
     }
 
     return 0;
+}
+
+void kvs_ev_free(kvs_ev_t *e) {
+    free(e->action);
+    free(e->active);
+    kvs_ev_free_core(e);
 }
