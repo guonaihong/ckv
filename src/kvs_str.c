@@ -12,17 +12,18 @@ int kvs_buf_append(kvs_buf_t *b, const char *p, int len) {
             needlen = len;
         }
 
-        b->p     = (char *)malloc(needlen);
+        b->p     = (char *)malloc(needlen + 1);
         b->len   = 0;
-        b->alloc = needlen;
+        b->alloc = needlen + 1;
     }
 
-    needlen = b->len + len;
+    needlen = b->len + len + 1;
     if (needlen > b->alloc) {
-        needlen = b->alloc * 2;
-        if (b->len + len > needlen ) {
-            needlen = b->len + len;
+
+        if (needlen < 2 * b->alloc) {
+            needlen = 2 * b->alloc;
         }
+
         newp = realloc(b->p, needlen);
         if (newp == NULL) {
             return -1;
@@ -33,5 +34,6 @@ int kvs_buf_append(kvs_buf_t *b, const char *p, int len) {
 
     memcpy(b->p + b->len, p, len);
     b->len += len;
+    b->p[b->len] = '\0';
     return 0;
 }
