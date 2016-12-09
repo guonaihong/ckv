@@ -16,12 +16,15 @@ struct kvs_cmd_t {
     int       flags;
 };
 
+#define KVS_OUTPUT_SIZE 16 * 1024
 typedef struct kvs_client_t kvs_client_t;
 struct kvs_client_t {
+    kvs_buf_t rbuf;
     int       fd;
-    kvs_buf_t buf;
     int       pos;
     int       nhead;
+    char      wbuf[KVS_OUTPUT_SIZE]; //small content values
+    int       wpos;
     kvs_cmd_t cmd;
 };
 

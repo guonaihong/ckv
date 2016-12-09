@@ -1,6 +1,9 @@
+#include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 #include <sys/epoll.h>
+#include <errno.h>
 #include "kvs_ev.h"
 
 typedef struct kvs_ev_epoll_t {
@@ -15,6 +18,10 @@ void *kvs_ev_epoll_new(int size) {
     }
 
     if ((ev->epfd = epoll_create(size)) == -1) {
+        goto fail;
+    }
+
+    if ((ev->events = malloc(sizeof(struct epoll_event) * size)) == NULL) {
         goto fail;
     }
 
@@ -81,6 +88,8 @@ int kvs_ev_epoll_cycle(kvs_ev_t *e, struct timeval *tv) {
 
     n = epoll_wait(ev->epfd, ev->events, e->size, tv ? (tv->tv_sec * 1000 + tv->tv_usec / 1000): -1);
 
+    printf("%s:epfd = %d:n = %d:%s\n", __func__, ev->epfd, n, strerror(errno));
+    printf("e->size = %d\n", e->size);
     for (i = 0; i < n; i++) {
         e->active[i].fd = ev->events[i].data.fd;
         if (ev->events[i].events & EPOLLIN) {

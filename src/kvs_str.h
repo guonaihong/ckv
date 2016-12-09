@@ -23,6 +23,7 @@ struct kvs_str_t {
 #define kvs_buf_len(b) b->len
 #define kvs_buf_null(b) (b)->p = NULL; (b)->len = 0; (b)->alloc = 0;
 
+#define kvs_str_null(b) (b)->p = NULL; (b)->len = 0;
 #define kvs_str_len(s) kvs_buf_len(s)
 
 int kvs_buf_append(kvs_buf_t *b, const char *p, int len);

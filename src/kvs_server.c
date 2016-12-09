@@ -118,8 +118,12 @@ int kvs_server_init(kvs_server_t *s, const char *port) {
 
 int main() {
 
-    kvs_server_init(&kvs_server, "56789");
+    if (kvs_server_init(&kvs_server, "56789") == -1) {
+        printf("kvs init fail\n");
+        return 1;
+    }
     kvs_ev_cycle(kvs_server.ev, NULL);
     kvs_ev_free(kvs_server.ev);
+    printf("bye bye ..\n");
     return 0;
 }

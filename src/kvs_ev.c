@@ -17,7 +17,7 @@ kvs_ev_t *kvs_ev_api_new(int size, const char *api_name) {
     ev->action = malloc(sizeof(kvs_ev_action_t) * size);
     ev->active = malloc(sizeof(kvs_ev_active_t) * size);
 
-    if (ev->action || ev->active) {
+    if (ev->action == NULL|| ev->active == NULL) {
         goto err;
     }
 
@@ -66,13 +66,20 @@ kvs_ev_t *kvs_ev_api_select(int size, const char *api_name) {
         return NULL;
     }
 
-    ev = vtable->ev_new(size);
+    //TODO free
+    ev = malloc(sizeof(kvs_ev_t));
+    if (ev == NULL) {
+        return NULL;
+    }
+
+    ev->ev = vtable->ev_new(size);
     if (ev == NULL) {
         return NULL;
     }
 
     ev->api_name = api;
     ev->vtable   = vtable;
+    ev->size     = size;
     return ev;
 }
 
