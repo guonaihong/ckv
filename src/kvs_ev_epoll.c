@@ -46,16 +46,25 @@ int kvs_ev_epoll_add(kvs_ev_t *e, int fd, int mask) {
     kvs_ev_epoll_t *ev = (kvs_ev_epoll_t *)e->ev;
     struct epoll_event event;
 
+    /* debug */
+    printf("fd is %d, event(%s)\n", fd, mask & KVS_EV_READ? "read":(mask & KVS_EV_WRITE ? "write": "unknown"));
+
     if (mask & KVS_EV_READ) {
         event.data.fd = fd;
         event.events  = EPOLLIN;
-        epoll_ctl(ev->epfd, EPOLL_CTL_ADD, ev->epfd, &event);
+        if (epoll_ctl(ev->epfd, EPOLL_CTL_ADD, fd, &event) == -1) {
+            printf("epoll add read event fd (%d) fail:%s", fd, strerror(errno));
+            return -1;
+        }
     }
 
     if (mask & KVS_EV_WRITE) {
         event.data.fd = fd;
         event.events = EPOLLOUT;
-        epoll_ctl(ev->epfd, EPOLL_CTL_ADD, ev->epfd, &event);
+        if (epoll_ctl(ev->epfd, EPOLL_CTL_ADD, fd, &event) == -1) {
+            printf("epoll add write event fd (%d) fail:%s", fd, strerror(errno));
+            return -1;
+        }
     }
 
     return 0;
@@ -86,6 +95,7 @@ int kvs_ev_epoll_cycle(kvs_ev_t *e, struct timeval *tv) {
     int             i, n;
     kvs_ev_epoll_t *ev = (kvs_ev_epoll_t *)e->ev;
 
+    printf("do %s\n", __func__);
     n = epoll_wait(ev->epfd, ev->events, e->size, tv ? (tv->tv_sec * 1000 + tv->tv_usec / 1000): -1);
 
     printf("%s:epfd = %d:n = %d:%s\n", __func__, ev->epfd, n, strerror(errno));

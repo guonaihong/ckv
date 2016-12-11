@@ -85,9 +85,10 @@ int accept_fd(kvs_ev_t *e, int listen_fd, int mask, void *user_data) {
             if (errno != EWOULDBLOCK || errno != EAGAIN) {
                 return -1;
             }
+            continue;
         }
         if (socket_non_blocking(connfd) == -1) {
-            printf("set socket non-blocking fail:%s\n", strerror(errno));
+            printf("set socket non-blocking fail:%s:fd(%d)\n", strerror(errno), connfd);
             close(connfd);
             return -1;
         }
@@ -112,16 +113,27 @@ int kvs_server_init(kvs_server_t *s, const char *port) {
         return -1;
     }
 
+    if (listen(s->listen_fd, 0) == -1) {
+        printf("listen fail\n");
+        goto fail;
+    }
+
+    s->hash = kvs_hash_new(1024);
     kvs_ev_add(s->ev, s->listen_fd, KVS_EV_READ, accept_fd, NULL);
     return 0;
+fail:
+    close(s->listen_fd);
+    kvs_ev_free(s->ev);
+    return -1;
 }
 
 int main() {
 
-    if (kvs_server_init(&kvs_server, "56789") == -1) {
+    if (kvs_server_init(&kvs_server, "5678") == -1) {
         printf("kvs init fail\n");
         return 1;
     }
+    printf("cycle start\n");
     kvs_ev_cycle(kvs_server.ev, NULL);
     kvs_ev_free(kvs_server.ev);
     printf("bye bye ..\n");

@@ -22,7 +22,7 @@ struct kvs_client_t {
     kvs_buf_t rbuf;
     int       fd;
     int       pos;
-    int       nhead;
+    int       nargs;
     char      wbuf[KVS_OUTPUT_SIZE]; //small content values
     int       wpos;
     kvs_cmd_t cmd;

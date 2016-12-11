@@ -9,22 +9,31 @@
 #define KVS_PROTO_SIZE 4096
 
 int kvs_cmd_set(kvs_server_t *s, kvs_str_t *key, kvs_str_t *val, kvs_str_t *old_val) {
-    return kvs_hash_add(s->hash, key->p, (size_t)&key->len, (void **)&old_val->p);
+    printf("%s\n", __func__);
+    //printf("key len = %d\n", key->len);
+    *old_val = *val;
+    return kvs_hash_add(s->hash, key->p, (size_t)key->len, (void **)&old_val);
 }
 
 int kvs_cmd_get(kvs_server_t *s, kvs_str_t *key, kvs_str_t *val) {
+    printf("%s\n", __func__);
     kvs_hash_node_t *p;
 
     p = kvs_hash_find(s->hash, key->p, key->len);
     if (p == NULL) {
+        printf("no found:\n");
         return -1;
     }
 
     *val = *(kvs_str_t *)p->val;
+
+    char *str = strndup(val->p, val->len + 1);
+    printf("%s\n", str);
     return 0;
 }
 
 int kvs_cmd_del(kvs_server_t *s, kvs_str_t *key) {
+    printf("get\n");
     void *v;
     int   rv;
     rv = kvs_hash_del(s->hash, key->p, key->len, &v);
@@ -44,9 +53,15 @@ kvs_client_t *kvs_client_new(int fd) {
     kvs_buf_null(&c->rbuf);
     c->cmd.flags = KVS_CMD_UNUSED;
     c->wpos      = 0;
-    return 0;
+    return c;
 }
 
+static void debug_pr(char *p, int n) {
+    char *str = NULL;
+    str = strndup(p, n);
+    printf("-->parse val(%s):read buf is = %s\n", str, p);
+    free(str);
+}
 int kvs_net_unmarshal(kvs_client_t *c) {
     char *p    = NULL;
     int   i    = 0;
@@ -56,42 +71,64 @@ int kvs_net_unmarshal(kvs_client_t *c) {
 
     p = c->rbuf.p;
 
-    for (i = 0, len = c->rbuf.len; i < len; i++) {
+    printf("%s\n", __func__);
+    for (i = 0, len = c->rbuf.len; i < len; ) {
         if(p[i] == '*') {
             i++;
-            c->nhead = strtoul(p + i, &last, 10);
+            c->nargs= strtoul(p + i, &last, 10);
             if (errno == ERANGE) {
+                //TODO
             }
+            i = last - p;
             if (*last == '\r') i++;
-            if (*last == '\n') i++;
+            if (last[1] == '\n') i++;
 
             c->pos = i;
         }
 
-        if (*p == '$') {
+        if (p[i] == '$') {
             i++;
             nhead = strtoul(p + i, &last, 10);
             if (errno == ERANGE) {
                 //TODO
             }
+
+            i = last - p;
+            if (*last == '\r') i++;
+            if (last[1] == '\n') i++;
+
             if (c->cmd.action.len == 0) {
-                c->cmd.key.p   = p + i;
-                c->cmd.key.len = nhead;
+
+                printf("nhead = %d\n", nhead);
+                c->cmd.action.p   = p + i;
+                c->cmd.action.len = nhead;
+
+                printf("set cmd\n");
             } else if (c->cmd.key.len == 0) {
                 c->cmd.key.p   = p + i;
                 c->cmd.key.len = nhead;
+
+                printf("set key\n");
             } else if (c->cmd.val.len == 0) {
                 c->cmd.val.p   = p + i;
                 c->cmd.val.len = nhead;
+                c->cmd.flags |= KVS_CMD_OK;
+                printf("set val\n");
             }
             if (i + nhead < len) {
                 i += nhead;
             }
-            if (*last == '\r') i++;
-            if (*last == '\n') i++;
+
+            if (p[i] == '\r') i++;
+            if (p[i] == '\n') i++;
+
+            if (c->cmd.flags & KVS_CMD_OK) {
+                return 0;
+            }
         }
 
     }
+
     return 0;
 }
 
@@ -127,20 +164,23 @@ int kvs_net_write(kvs_ev_t *e, int fd, int mask, void *user_data) {
 #define MSG_TRUE  ":1\r\n"
 #define MSG_FALSE ":0\r\n"
 int kvs_cmd_exec(kvs_client_t *c) {
-    if (c->cmd.flags != KVS_CMD_OK)
+    printf("%s\n", __func__);
+    if (c->cmd.flags & KVS_CMD_OK)
         return EAGAIN;
 
     kvs_str_t val;
-    int       n;
+    int       n, rv;
 
     kvs_str_null(&val);
 
-    if (!strcmp(c->cmd.action.p, "set")) {
+    if (!strncmp(c->cmd.action.p, "set", sizeof("set") - 1)) {
         kvs_str_t *v = malloc(sizeof(kvs_str_t));
         memcpy(v, &c->cmd.val, sizeof(kvs_str_t));
 
         /* write ok */
-        if (kvs_cmd_set(&kvs_server, &c->cmd.key, v, &val) != -1) {
+        if ((rv = kvs_cmd_set(&kvs_server, &c->cmd.key, v, &val) == 1)) {
+            printf("rv = %d\n", rv);
+            /* TODO memory too small write fail */
             free(val.p);
             return 0;
         }
@@ -150,7 +190,7 @@ int kvs_cmd_exec(kvs_client_t *c) {
         /* write -1 */
     }
 
-    if (!strcmp(c->cmd.action.p, "get")) {
+    if (!strncmp(c->cmd.action.p, "get", sizeof("get") - 1)) {
         /* write value */
         if (kvs_cmd_get(&kvs_server, &c->cmd.key, &val) == -1) {
             /* write -1 */
@@ -166,7 +206,7 @@ int kvs_cmd_exec(kvs_client_t *c) {
 
     }
 
-    if (!strcmp(c->cmd.action.p, "del")) {
+    if (!strncmp(c->cmd.action.p, "del", sizeof("del") - 1)) {
         if (kvs_cmd_del(&kvs_server, &c->cmd.key) == 0) {
             /* write 1 */
             memcpy(c->wbuf, MSG_TRUE, sizeof(MSG_TRUE) - 1);
@@ -188,20 +228,30 @@ int kvs_net_read(kvs_ev_t *e, int fd, int mask, void *user_data) {
     char buf[KVS_PROTO_SIZE];
     int  rv;
 
+    printf("start %s\n", __func__);
     kvs_client_t *c = (kvs_client_t *)user_data;
     for (;;) {
-        rv = read(fd, buf, KVS_PROTO_SIZE);
+        rv = read(fd, buf, KVS_PROTO_SIZE - 1);
+        /* printf("rv = %d errno(%s):fd(%d)\n", rv, strerror(errno), fd); */
         if (rv == -1) {
             if (errno == EINTR) {
                 continue;
             }
             break;
         }
+        if (rv == 0) {
+            break;
+        }
 
         kvs_buf_append(&c->rbuf, buf, rv);
+        printf("read buf is %s:len(%d)\n", c->rbuf.p, c->rbuf.len);
     }
 
     kvs_net_unmarshal(c);
     kvs_cmd_exec(c);
+
+    if (rv == 0) {
+        close(fd);
+    }
     return 0;
 }

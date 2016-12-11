@@ -66,7 +66,6 @@ kvs_ev_t *kvs_ev_api_select(int size, const char *api_name) {
         return NULL;
     }
 
-    //TODO free
     ev = malloc(sizeof(kvs_ev_t));
     if (ev == NULL) {
         return NULL;
@@ -211,18 +210,20 @@ int kvs_ev_cycle(kvs_ev_t *e, struct timeval *tv) {
     int              i, n, fd, mask;
     kvs_ev_action_t *action;
 
-    n = kvs_ev_cycle_core(e, tv);
-    for(i = 0; i < n; i++) {
-        action = &e->action[e->active[i].fd];
-        mask   = e->active[i].mask;
-        fd     = e->active[i].fd;
+    for (;;) {
+        n = kvs_ev_cycle_core(e, tv);
+        for(i = 0; i < n; i++) {
+            action = &e->action[e->active[i].fd];
+            mask   = e->active[i].mask;
+            fd     = e->active[i].fd;
 
-        if (action->mask & mask & KVS_EV_READ) {
-            action->read_proc(e, fd, mask, action->user_data);
-        }
+            if (action->mask & mask & KVS_EV_READ) {
+                action->read_proc(e, fd, mask, action->user_data);
+            }
 
-        if (action->mask & mask & KVS_EV_WRITE) {
-            action->write_proc(e, fd, mask, action->user_data);
+            if (action->mask & mask & KVS_EV_WRITE) {
+                action->write_proc(e, fd, mask, action->user_data);
+            }
         }
     }
 
@@ -233,4 +234,5 @@ void kvs_ev_free(kvs_ev_t *e) {
     free(e->action);
     free(e->active);
     kvs_ev_free_core(e);
+    free(e);
 }
