@@ -153,6 +153,8 @@ int kvs_net_write(kvs_ev_t *e, int fd, int mask, void *user_data) {
 
     if (c->wpos - cn == 0) {
         kvs_ev_del(kvs_server.ev, c->fd, KVS_EV_WRITE, kvs_net_write, c);
+        c->wpos = 0;
+        c->cmd.flags = 0;
     }
     return cn;
 }
@@ -233,7 +235,7 @@ int kvs_net_read(kvs_ev_t *e, int fd, int mask, void *user_data) {
     kvs_client_t *c = (kvs_client_t *)user_data;
     for (;;) {
         rv = read(fd, buf, KVS_PROTO_SIZE - 1);
-        /* printf("rv = %d errno(%s):fd(%d)\n", rv, strerror(errno), fd); */
+        printf("* %s:rv = %d errno(%s):fd(%d)\n", __func__, rv, strerror(errno), fd);
         if (rv == -1) {
             if (errno == EINTR) {
                 continue;
@@ -251,7 +253,9 @@ int kvs_net_read(kvs_ev_t *e, int fd, int mask, void *user_data) {
     kvs_net_unmarshal(c);
     kvs_cmd_exec(c);
 
+    printf("read rv = 0\n");
     if (rv == 0) {
+        kvs_ev_del(kvs_server.ev, c->fd, KVS_EV_READ|KVS_EV_WRITE, kvs_net_write, c);
         close(fd);
     }
     return 0;

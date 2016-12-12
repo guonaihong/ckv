@@ -55,7 +55,6 @@ int kvs_ev_epoll_add(kvs_ev_t *e, int fd, int mask) {
     int op = (e->cache[fd].mask == KVS_EV_UNUSED) ? EPOLL_CTL_ADD : EPOLL_CTL_MOD;
 
     debug_ev(fd, mask);
-    printf("epoll_ctl_add = %d:op = %d:mask = %d\n", EPOLL_CTL_ADD, op, mask);
 
     mask |= e->cache[fd].mask;
     event.data.fd = fd;
@@ -63,8 +62,9 @@ int kvs_ev_epoll_add(kvs_ev_t *e, int fd, int mask) {
     if (mask & KVS_EV_READ)  event.events |= EPOLLIN;
     if (mask & KVS_EV_WRITE) event.events |= EPOLLOUT;
 
+    printf("epoll_ctl_add = %d:op = %d:mask = %d\n", EPOLL_CTL_ADD, op, mask);
     if (epoll_ctl(ev->epfd, op, fd, &event) == -1) {
-        printf("epoll add read event fd (%d) fail:%s", fd, strerror(errno));
+        printf("epoll add event fd (%d) fail:%s:%d\n", fd, strerror(errno), errno);
         return -1;
     }
 
@@ -74,20 +74,23 @@ int kvs_ev_epoll_add(kvs_ev_t *e, int fd, int mask) {
 int kvs_ev_epoll_del(kvs_ev_t *e, int fd, int mask) {
     kvs_ev_epoll_t    *ev = (kvs_ev_epoll_t *)e->ev;
     struct epoll_event event;
+    int op, newmask;
+    newmask = e->cache[fd].mask & (~mask);
+    op = (newmask == KVS_EV_UNUSED) ? EPOLL_CTL_DEL : EPOLL_CTL_MOD;
 
+    event.events  = 0;
+    event.data.fd = fd;
     if (mask & KVS_EV_READ) {
-        event.data.fd = fd;
-        event.events  = EPOLLIN;
-        if (epoll_ctl(ev->epfd, EPOLL_CTL_DEL, ev->epfd, &event) != 0) {
-            return -1;
-        }
-        event.events  = 0;
+        event.events  |= EPOLLIN;
     }
 
     if (mask & KVS_EV_WRITE) {
-        event.data.fd = fd;
-        event.events  = EPOLLOUT;
-        return epoll_ctl(ev->epfd, EPOLL_CTL_DEL, ev->epfd, &event);
+        event.events  |= EPOLLOUT;
+    }
+
+    if (epoll_ctl(ev->epfd, op, fd, &event) == -1) {
+        printf("epoll del event fd (%d) fail:%s:%d\n", fd, strerror(errno), errno);
+        return -1;
     }
     return 0;
 }
