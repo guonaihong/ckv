@@ -2,6 +2,25 @@
 #include <string.h>
 #include "kvs_str.h"
 
+kvs_str_t *kvs_str_new(const char *p, size_t len) {
+    kvs_str_t *s = malloc(sizeof(kvs_str_t));
+    if (s == NULL) {
+        return s;
+    }
+
+    s->p      = malloc(len + 1);
+    s->len    = len;
+    memcpy(s->p, p, len);
+    s->p[len] = '\0';
+
+    return s;
+}
+
+void kvs_str_free(kvs_str_t *s) {
+    free(s->p);
+    free(s);
+}
+
 int kvs_buf_append(kvs_buf_t *b, const char *p, int len) {
 
     int needlen = kvs_buf_dsize;

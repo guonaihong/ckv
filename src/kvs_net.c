@@ -8,14 +8,17 @@
 #include "kvs_common.h"
 #define KVS_PROTO_SIZE 4096
 
-int kvs_cmd_set(kvs_server_t *s, kvs_str_t *key, kvs_str_t *val, kvs_str_t *old_val) {
+int kvs_cmd_set(kvs_server_t *s, kvs_str_t *key, kvs_str_t *val, kvs_str_t **old_val) {
     printf("%s\n", __func__);
-    //printf("key len = %d\n", key->len);
-    *old_val = *val;
-    return kvs_hash_add(s->hash, key->p, (size_t)key->len, (void **)&old_val);
+    *old_val = val;
+    printf("1111 val = %p, old_val = %p \n", val, *old_val);
+    int rv;
+    rv = kvs_hash_add(s->hash, key->p, (size_t)key->len, (void **)old_val);
+    printf("2222 val = %p, old_val = %p \n", val, *old_val);
+    return  rv;
 }
 
-int kvs_cmd_get(kvs_server_t *s, kvs_str_t *key, kvs_str_t *val) {
+int kvs_cmd_get(kvs_server_t *s, kvs_str_t *key, kvs_str_t **val) {
     printf("%s\n", __func__);
     kvs_hash_node_t *p;
 
@@ -25,10 +28,10 @@ int kvs_cmd_get(kvs_server_t *s, kvs_str_t *key, kvs_str_t *val) {
         return -1;
     }
 
-    *val = *(kvs_str_t *)p->val;
+    *val = p->val;
 
-    char *str = strndup(val->p, val->len + 1);
-    printf("%s\n", str);
+    char *str = strndup((*val)->p, (*val)->len + 1);
+    printf("get result:%s\n", str);
     return 0;
 }
 
@@ -56,12 +59,6 @@ kvs_client_t *kvs_client_new(int fd) {
     return c;
 }
 
-static void debug_pr(char *p, int n) {
-    char *str = NULL;
-    str = strndup(p, n);
-    printf("-->parse val(%s):read buf is = %s\n", str, p);
-    free(str);
-}
 int kvs_net_unmarshal(kvs_client_t *c) {
     char *p    = NULL;
     int   i    = 0;
@@ -113,7 +110,7 @@ int kvs_net_unmarshal(kvs_client_t *c) {
                 c->cmd.val.p   = p + i;
                 c->cmd.val.len = nhead;
                 c->cmd.flags |= KVS_CMD_OK;
-                printf("set val\n");
+                printf("%d:### set val\n", c->cmd.flags);
             }
             if (i + nhead < len) {
                 i += nhead;
@@ -134,6 +131,7 @@ int kvs_net_unmarshal(kvs_client_t *c) {
 
 int kvs_net_write(kvs_ev_t *e, int fd, int mask, void *user_data) {
 
+    printf(":::%s\n", __func__);
     kvs_client_t *c;
     int           rv, cn;
 
@@ -163,25 +161,23 @@ int kvs_net_write(kvs_ev_t *e, int fd, int mask, void *user_data) {
 #define MSG_ERR   "$-1\r\n"
 #define MSG_TRUE  ":1\r\n"
 #define MSG_FALSE ":0\r\n"
+
 int kvs_cmd_exec(kvs_client_t *c) {
     printf("%s\n", __func__);
-    if (c->cmd.flags & KVS_CMD_OK)
+    if (!(c->cmd.flags & KVS_CMD_OK))
         return EAGAIN;
 
-    kvs_str_t val;
+    kvs_str_t *val;
     int       n, rv;
 
-    kvs_str_null(&val);
+    val = NULL;
 
     if (!strncmp(c->cmd.action.p, "set", sizeof("set") - 1)) {
-        kvs_str_t *v = malloc(sizeof(kvs_str_t));
-        memcpy(v, &c->cmd.val, sizeof(kvs_str_t));
-
+        kvs_str_t *v = kvs_str_new(c->cmd.val.p, c->cmd.val.len);
         /* write ok */
         if ((rv = kvs_cmd_set(&kvs_server, &c->cmd.key, v, &val) == 1)) {
-            printf("rv = %d\n", rv);
             /* TODO memory too small write fail */
-            free(val.p);
+            kvs_str_free(val);
             return 0;
         }
 
@@ -198,14 +194,15 @@ int kvs_cmd_exec(kvs_client_t *c) {
             return -1;
         }
 
-        if (val.len < KVS_OUTPUT_SIZE - 32 + 3) {
-            n = snprintf(c->wbuf, KVS_PROTO_SIZE, "$%d\r\n", val.len);
-            memcpy(c->wbuf + n, val.p, val.len);
-            c->wpos = n + val.len;
+        if (val->len < KVS_OUTPUT_SIZE - 32 + 3) {
+            n = snprintf(c->wbuf, KVS_PROTO_SIZE, "$%d\r\n", val->len);
+            memcpy(c->wbuf + n, val->p, val->len);
+            c->wpos = n + val->len;
         }
 
     }
 
+#if 0
     if (!strncmp(c->cmd.action.p, "del", sizeof("del") - 1)) {
         if (kvs_cmd_del(&kvs_server, &c->cmd.key) == 0) {
             /* write 1 */
@@ -218,8 +215,12 @@ int kvs_cmd_exec(kvs_client_t *c) {
         }
     }
 
-    if (c->cmd.flags == KVS_CMD_OK && c->wpos != 0) {
-        kvs_ev_add(kvs_server.ev, c->fd, KVS_EV_WRITE, kvs_net_write, c);
+#endif
+
+    printf("%d:::wpos = %d\n", c->cmd.flags, c->wpos);
+    if ((c->cmd.flags & KVS_CMD_OK) && c->wpos != 0) {
+        rv = kvs_ev_add(kvs_server.ev, c->fd, KVS_EV_WRITE, kvs_net_write, c);
+        printf("call write rv = %d\n", rv);
     }
     return 0;
 }

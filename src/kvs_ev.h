@@ -12,12 +12,12 @@ extern "C" {
 #define KVS_EV_ERR     -1
 
 typedef struct kvs_ev_vtable_t kvs_ev_vtable_t;
-typedef struct kvs_ev_action_t kvs_ev_action_t;
+typedef struct kvs_ev_cache_t kvs_ev_cache_t;
 typedef struct kvs_ev_active_t kvs_ev_active_t;
 typedef struct kvs_ev_t        kvs_ev_t;
 typedef int (*kvs_ev_proc_t)(kvs_ev_t *e, int fd, int mask, void *user_data);
 
-struct kvs_ev_action_t{
+struct kvs_ev_cache_t{
     int   mask;
     kvs_ev_proc_t read_proc;
     kvs_ev_proc_t write_proc;
@@ -35,7 +35,7 @@ struct kvs_ev_t {
     int           size;
     int           maxfd;
 
-    kvs_ev_action_t *action;
+    kvs_ev_cache_t *cache;
     kvs_ev_active_t *active;
     kvs_ev_vtable_t *vtable;
     unsigned char stop;

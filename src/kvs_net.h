@@ -13,7 +13,7 @@ struct kvs_cmd_t {
     kvs_str_t action;
     kvs_str_t key;
     kvs_str_t val;
-    int       flags;
+    unsigned  flags;
 };
 
 #define KVS_OUTPUT_SIZE 16 * 1024
@@ -30,8 +30,8 @@ struct kvs_client_t {
 
 kvs_client_t *kvs_client_new(int fd);
 
-#define KVS_CMD_OK      0
-#define KVS_CMD_UNUSED -1
+#define KVS_CMD_OK      0x1
+#define KVS_CMD_UNUSED  0
 #ifdef __cplusplus
 }
 #endif

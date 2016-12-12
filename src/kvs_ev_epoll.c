@@ -42,29 +42,30 @@ int kvs_ev_epoll_resize(kvs_ev_t *e, int size) {
     return 0;
 }
 
+int debug_ev(int fd, int mask) {
+    printf("fd is %d, event(%s)\n", fd, mask & KVS_EV_READ? "read":(mask & KVS_EV_WRITE ? "write": "unknown"));
+    return 0;
+}
+
 int kvs_ev_epoll_add(kvs_ev_t *e, int fd, int mask) {
     kvs_ev_epoll_t *ev = (kvs_ev_epoll_t *)e->ev;
     struct epoll_event event;
 
     /* debug */
-    printf("fd is %d, event(%s)\n", fd, mask & KVS_EV_READ? "read":(mask & KVS_EV_WRITE ? "write": "unknown"));
+    int op = (e->cache[fd].mask == KVS_EV_UNUSED) ? EPOLL_CTL_ADD : EPOLL_CTL_MOD;
 
-    if (mask & KVS_EV_READ) {
-        event.data.fd = fd;
-        event.events  = EPOLLIN;
-        if (epoll_ctl(ev->epfd, EPOLL_CTL_ADD, fd, &event) == -1) {
-            printf("epoll add read event fd (%d) fail:%s", fd, strerror(errno));
-            return -1;
-        }
-    }
+    debug_ev(fd, mask);
+    printf("epoll_ctl_add = %d:op = %d:mask = %d\n", EPOLL_CTL_ADD, op, mask);
 
-    if (mask & KVS_EV_WRITE) {
-        event.data.fd = fd;
-        event.events = EPOLLOUT;
-        if (epoll_ctl(ev->epfd, EPOLL_CTL_ADD, fd, &event) == -1) {
-            printf("epoll add write event fd (%d) fail:%s", fd, strerror(errno));
-            return -1;
-        }
+    mask |= e->cache[fd].mask;
+    event.data.fd = fd;
+    event.events = 0;
+    if (mask & KVS_EV_READ)  event.events |= EPOLLIN;
+    if (mask & KVS_EV_WRITE) event.events |= EPOLLOUT;
+
+    if (epoll_ctl(ev->epfd, op, fd, &event) == -1) {
+        printf("epoll add read event fd (%d) fail:%s", fd, strerror(errno));
+        return -1;
     }
 
     return 0;

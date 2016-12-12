@@ -14,10 +14,10 @@ kvs_ev_t *kvs_ev_api_new(int size, const char *api_name) {
         return NULL;
     }
 
-    ev->action = malloc(sizeof(kvs_ev_action_t) * size);
+    ev->cache = malloc(sizeof(kvs_ev_cache_t) * size);
     ev->active = malloc(sizeof(kvs_ev_active_t) * size);
 
-    if (ev->action == NULL|| ev->active == NULL) {
+    if (ev->cache == NULL|| ev->active == NULL) {
         goto err;
     }
 
@@ -28,7 +28,7 @@ kvs_ev_t *kvs_ev_api_new(int size, const char *api_name) {
     return ev;
 err:
     if (ev) {
-        free(ev->action);
+        free(ev->cache);
         free(ev->active);
         kvs_ev_free_core(ev);
     }
@@ -117,15 +117,15 @@ int kvs_ev_add(kvs_ev_t *e, int fd, int mask, kvs_ev_proc_t proc, void *user_dat
     }
 
     if (mask & KVS_EV_READ) {
-        e->action[fd].read_proc = proc;
+        e->cache[fd].read_proc = proc;
     }
 
     if (mask & KVS_EV_WRITE) {
-        e->action[fd].write_proc = proc;
+        e->cache[fd].write_proc = proc;
     }
 
-    e->action[fd].user_data = user_data;
-    e->action[fd].mask = mask;
+    e->cache[fd].user_data = user_data;
+    e->cache[fd].mask |= mask;
 
     if (fd > e->maxfd) {
         e->maxfd = fd;
@@ -135,7 +135,7 @@ int kvs_ev_add(kvs_ev_t *e, int fd, int mask, kvs_ev_proc_t proc, void *user_dat
 }
 
 int kvs_ev_del(kvs_ev_t *e, int fd, int mask, kvs_ev_proc_t porc, void *user_data) {
-    kvs_ev_action_t *action;
+    kvs_ev_cache_t *cache;
     int              i;
 
     if (fd >= e->size) {
@@ -150,12 +150,12 @@ int kvs_ev_del(kvs_ev_t *e, int fd, int mask, kvs_ev_proc_t porc, void *user_dat
         return -1;
     }
 
-    action = &e->action[fd];
-    action->mask = action->mask & (~mask);
+    cache = &e->cache[fd];
+    cache->mask = cache->mask & (~mask);
 
     if (e->size == fd) {
         for (i = e->size; i > 0; i--) {
-            if (e->action[i].mask == KVS_EV_UNUSED) {
+            if (e->cache[i].mask == KVS_EV_UNUSED) {
                 continue;
             }
             break;
@@ -181,11 +181,11 @@ int kvs_ev_resize(kvs_ev_t *e, int new_size) {
         return KVS_EV_ERR;
     }
 
-    newptr = realloc(e->action, sizeof(kvs_ev_action_t) * new_size);
+    newptr = realloc(e->cache, sizeof(kvs_ev_cache_t) * new_size);
     if (newptr == NULL) {
         return KVS_EV_ERR;
     }
-    e->action = newptr;
+    e->cache = newptr;
 
     newptr = realloc(e->active, sizeof(kvs_ev_active_t) * new_size);
     if (newptr == NULL) {
@@ -194,7 +194,7 @@ int kvs_ev_resize(kvs_ev_t *e, int new_size) {
     e->active = newptr;
 
     for (i = e->size; i < new_size; i++) {
-        e->action[i].mask = KVS_EV_UNUSED;
+        e->cache[i].mask = KVS_EV_UNUSED;
     }
 
     e->size = new_size;
@@ -208,21 +208,21 @@ void kvs_ev_stop(kvs_ev_t *e) {
 
 int kvs_ev_cycle(kvs_ev_t *e, struct timeval *tv) {
     int              i, n, fd, mask;
-    kvs_ev_action_t *action;
+    kvs_ev_cache_t *cache;
 
     for (;;) {
         n = kvs_ev_cycle_core(e, tv);
         for(i = 0; i < n; i++) {
-            action = &e->action[e->active[i].fd];
+            cache = &e->cache[e->active[i].fd];
             mask   = e->active[i].mask;
             fd     = e->active[i].fd;
 
-            if (action->mask & mask & KVS_EV_READ) {
-                action->read_proc(e, fd, mask, action->user_data);
+            if (cache->mask & mask & KVS_EV_READ) {
+                cache->read_proc(e, fd, mask, cache->user_data);
             }
 
-            if (action->mask & mask & KVS_EV_WRITE) {
-                action->write_proc(e, fd, mask, action->user_data);
+            if (cache->mask & mask & KVS_EV_WRITE) {
+                cache->write_proc(e, fd, mask, cache->user_data);
             }
         }
     }
@@ -231,7 +231,7 @@ int kvs_ev_cycle(kvs_ev_t *e, struct timeval *tv) {
 }
 
 void kvs_ev_free(kvs_ev_t *e) {
-    free(e->action);
+    free(e->cache);
     free(e->active);
     kvs_ev_free_core(e);
     free(e);

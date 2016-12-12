@@ -104,7 +104,7 @@ int kvs_server_init(kvs_server_t *s, const char *port) {
     s->ev = kvs_ev_api_new(100, "epoll");
     s->listen_fd = bind_create((char *)port);
     if (s->listen_fd == -1) {
-        printf("bind fail:\n");
+        printf("bind fail:%s\n", strerror(errno));
         return -1;
     }
 
@@ -114,7 +114,7 @@ int kvs_server_init(kvs_server_t *s, const char *port) {
     }
 
     if (listen(s->listen_fd, 0) == -1) {
-        printf("listen fail\n");
+        printf("listen fail:%s\n", strerror(errno));
         goto fail;
     }
 
@@ -129,7 +129,7 @@ fail:
 
 int main() {
 
-    if (kvs_server_init(&kvs_server, "5678") == -1) {
+    if (kvs_server_init(&kvs_server, "56789") == -1) {
         printf("kvs init fail\n");
         return 1;
     }
