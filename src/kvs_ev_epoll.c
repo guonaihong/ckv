@@ -62,9 +62,7 @@ int kvs_ev_epoll_add(kvs_ev_t *e, int fd, int mask) {
     if (mask & KVS_EV_READ)  event.events |= EPOLLIN;
     if (mask & KVS_EV_WRITE) event.events |= EPOLLOUT;
 
-    printf("epoll_ctl_add = %d:op = %d:mask = %d\n", EPOLL_CTL_ADD, op, mask);
     if (epoll_ctl(ev->epfd, op, fd, &event) == -1) {
-        printf("epoll add event fd (%d) fail:%s:%d\n", fd, strerror(errno), errno);
         return -1;
     }
 
@@ -89,7 +87,6 @@ int kvs_ev_epoll_del(kvs_ev_t *e, int fd, int mask) {
     }
 
     if (epoll_ctl(ev->epfd, op, fd, &event) == -1) {
-        printf("epoll del event fd (%d) fail:%s:%d\n", fd, strerror(errno), errno);
         return -1;
     }
     return 0;
@@ -99,11 +96,8 @@ int kvs_ev_epoll_cycle(kvs_ev_t *e, struct timeval *tv) {
     int             i, n;
     kvs_ev_epoll_t *ev = (kvs_ev_epoll_t *)e->ev;
 
-    printf("do %s\n", __func__);
     n = epoll_wait(ev->epfd, ev->events, e->size, tv ? (tv->tv_sec * 1000 + tv->tv_usec / 1000): -1);
 
-    printf("%s:epfd = %d:n = %d:%s\n", __func__, ev->epfd, n, strerror(errno));
-    printf("e->size = %d\n", e->size);
     for (i = 0; i < n; i++) {
         e->active[i].fd = ev->events[i].data.fd;
         if (ev->events[i].events & EPOLLIN) {

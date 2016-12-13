@@ -8,6 +8,8 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netdb.h>
+#include <libgen.h>
+#include "kvs_log.h"
 #include "kvs_net.h"
 #include "kvs_ev.h"
 #include "kvs_common.h"
@@ -99,22 +101,23 @@ int accept_fd(kvs_ev_t *e, int listen_fd, int mask, void *user_data) {
     return 0;
 }
 
-int kvs_server_init(kvs_server_t *s, const char *port) {
+int kvs_server_init(kvs_server_t *s, const char *port, kvs_log_t *log) {
 
-    s->ev = kvs_ev_api_new(100, "epoll");
+    s->ev        = kvs_ev_api_new(100, "epoll");
     s->listen_fd = bind_create((char *)port);
+    s->log       = log;
     if (s->listen_fd == -1) {
-        printf("bind fail:%s\n", strerror(errno));
+        kvs_log(log, KVS_ERROR, "bind fail:%s\n", strerror(errno));
         return -1;
     }
 
     if (socket_non_blocking(s->listen_fd) == -1) {
-        printf("set listen fd non-blocking fail:%s\n", strerror(errno));
+        kvs_log(log, KVS_ERROR, "set listen fd non-blocking fail:%s\n", strerror(errno));
         return -1;
     }
 
     if (listen(s->listen_fd, 0) == -1) {
-        printf("listen fail:%s\n", strerror(errno));
+        kvs_log(log, KVS_ERROR, "listen fail:%s\n", strerror(errno));
         goto fail;
     }
 
@@ -127,15 +130,20 @@ fail:
     return -1;
 }
 
-int main() {
+int main(int argc, char **argv) {
 
-    if (kvs_server_init(&kvs_server, "56789") == -1) {
-        printf("kvs init fail\n");
+    kvs_log_t *log;
+    log = kvs_log_new(KVS_DEBUG, basename(argv[0]), 0);
+
+    if (kvs_server_init(&kvs_server, "56789", log) == -1) {
+        kvs_log(log, KVS_ERROR, "kvs init fail\n");
+        kvs_log_free(log);
         return 1;
     }
-    printf("cycle start\n");
+    kvs_log(log, KVS_DEBUG, "cycle start\n");
     kvs_ev_cycle(kvs_server.ev, NULL);
     kvs_ev_free(kvs_server.ev);
-    printf("bye bye ..\n");
+    kvs_log(log, KVS_DEBUG, "bye bye ..\n");
+    kvs_log_free(log);
     return 0;
 }
