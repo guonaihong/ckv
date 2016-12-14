@@ -103,7 +103,7 @@ int accept_fd(kvs_ev_t *e, int listen_fd, int mask, void *user_data) {
 
 int kvs_server_init(kvs_server_t *s, const char *port, kvs_log_t *log) {
 
-    s->ev        = kvs_ev_api_new(100, "epoll");
+    s->ev        = kvs_ev_api_new(100, "select");
     s->listen_fd = bind_create((char *)port);
     s->log       = log;
     if (s->listen_fd == -1) {
