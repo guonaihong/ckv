@@ -41,10 +41,12 @@ kvs_ev_t *kvs_ev_api_select(int size, const char *api_name) {
     char            *api    = NULL;
 
     if (!strcmp(api_name, "epoll")) {
+#ifdef KVS_EV_EPOLL
         extern kvs_ev_vtable_t kvs_ev_epoll;
         vtable = &kvs_ev_epoll;
         api    = "epoll";
 
+#endif
     } else if (!strcmp(api_name, "select")) {
         extern kvs_ev_vtable_t kvs_ev_select;
         vtable = &kvs_ev_select;

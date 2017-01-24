@@ -23,11 +23,11 @@ int marshal(kvs_cli_t *c, kvs_cmd_t *cmd) {
 
     kvs_buf_append((kvs_buf_t *)&buf, cmd->action.p, cmd->action.len);
 
-    kvs_buf_append_sprintf(&buf, "\r\n%d\r\n", cmd->key.len);
+    kvs_buf_append_sprintf(&buf, "\r\n$%d\r\n", cmd->key.len);
 
     kvs_buf_append((kvs_buf_t *)&buf, cmd->key.p, cmd->key.len);
 
-    kvs_buf_append_sprintf(&buf, "\r\n%d\r\n", cmd->val.len);
+    kvs_buf_append_sprintf(&buf, "\r\n$%d\r\n", cmd->val.len);
 
     kvs_buf_append((kvs_buf_t *)&buf, cmd->val.p, cmd->val.len);
 

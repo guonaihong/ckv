@@ -5,6 +5,7 @@
 extern "C" {
 #endif
 
+#include <pthread.h>
 typedef struct kvs_log_t kvs_log_t;
 
 struct kvs_log_t {
