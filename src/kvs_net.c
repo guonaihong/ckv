@@ -14,7 +14,7 @@ int kvs_cmd_set(kvs_server_t *s, kvs_str_t *key, kvs_str_t *val, kvs_str_t **old
     kvs_log(s->log, KVS_DEBUG, "1111 val = %p, old_val = %p \n", val, *old_val);
     int rv;
     rv = kvs_hash_add(s->hash, key->p, (size_t)key->len, (void **)old_val);
-    kvs_log(s->log, KVS_DEBUG, "2222 val = %p, old_val = %p \n", val, *old_val);
+    kvs_log(s->log, KVS_DEBUG, "2222 val = %p, old_val = %p rv = (%d)\n", val, *old_val, rv);
     return  rv;
 }
 
@@ -24,7 +24,7 @@ int kvs_cmd_get(kvs_server_t *s, kvs_str_t *key, kvs_str_t **val) {
 
     p = kvs_hash_find(s->hash, key->p, key->len);
     if (p == NULL) {
-        kvs_log(s->log, KVS_DEBUG, "no found:\n");
+        kvs_log(s->log, KVS_DEBUG, "not found:\n");
         return -1;
     }
 
@@ -60,6 +60,20 @@ kvs_client_t *kvs_client_new(int fd) {
     return c;
 }
 
+void kvs_cmd_reset(kvs_cmd_t *cmd) {
+    kvs_str_null(&cmd->action);
+    kvs_str_null(&cmd->key);
+    kvs_str_null(&cmd->val);
+    cmd->flags = KVS_CMD_UNUSED;
+}
+
+void kvs_client_reset(kvs_client_t *c) {
+
+    c->pos  = 0;
+    c->wpos = 0;
+    kvs_cmd_reset(&c->cmd);
+}
+
 int kvs_net_unmarshal(kvs_client_t *c) {
     char *p    = NULL;
     int   i    = 0;
@@ -69,7 +83,9 @@ int kvs_net_unmarshal(kvs_client_t *c) {
 
     p = c->rbuf.p;
 
-    kvs_log(kvs_server.log, KVS_DEBUG, "%s\n", __func__);
+    kvs_log(kvs_server.log, KVS_DEBUG, "%s:buffer(l:%d, a:%d, p:%d, wp:%d)\n",
+            __func__, c->rbuf.len, c->rbuf.alloc, c->pos, c->wpos);
+
     for (i = 0, len = c->rbuf.len; i < len; ) {
         if(p[i] == '*') {
             i++;
@@ -84,6 +100,7 @@ int kvs_net_unmarshal(kvs_client_t *c) {
             c->pos = i;
         }
 
+        //TODO: Wrong protocol format, exit parsing
         if (p[i] == '$') {
             i++;
             nhead = strtoul(p + i, &last, 10);
@@ -112,6 +129,7 @@ int kvs_net_unmarshal(kvs_client_t *c) {
                 c->cmd.val.len = nhead;
                 c->cmd.flags |= KVS_CMD_OK;
                 kvs_log(kvs_server.log, KVS_DEBUG, "%d:### set val\n", c->cmd.flags);
+
             }
             if (i + nhead < len) {
                 i += nhead;
@@ -121,6 +139,7 @@ int kvs_net_unmarshal(kvs_client_t *c) {
             if (p[i] == '\n') i++;
 
             if (c->cmd.flags & KVS_CMD_OK) {
+                kvs_buf_truncate(&c->rbuf, i);
                 return 0;
             }
         }
@@ -154,8 +173,8 @@ int kvs_net_write(kvs_ev_t *e, int fd, int mask, void *user_data) {
 
     if (c->wpos - cn == 0) {
         kvs_ev_del(kvs_server.ev, c->fd, KVS_EV_WRITE, kvs_net_write, c);
-        c->wpos = 0;
-        c->cmd.flags = 0;
+        kvs_log(kvs_server.log, KVS_DEBUG, "reset client:%p\n", c);
+        kvs_client_reset(c);
     }
     return cn;
 }
@@ -166,7 +185,7 @@ int kvs_net_write(kvs_ev_t *e, int fd, int mask, void *user_data) {
 #define MSG_FALSE ":0\r\n"
 
 int kvs_cmd_exec(kvs_client_t *c) {
-    kvs_log(kvs_server.log, KVS_DEBUG, "%s\n", __func__);
+    kvs_log(kvs_server.log, KVS_DEBUG, "%s:flag = %d\n", __func__, c->cmd.flags);
     if (!(c->cmd.flags & KVS_CMD_OK))
         return EAGAIN;
 
@@ -181,7 +200,6 @@ int kvs_cmd_exec(kvs_client_t *c) {
         if ((rv = kvs_cmd_set(&kvs_server, &c->cmd.key, v, &val) == 1)) {
             /* TODO memory too small write fail */
             kvs_str_free(val);
-            return 0;
         }
 
         memcpy(c->wbuf, MSG_OK, sizeof(MSG_OK) -1);
@@ -194,7 +212,7 @@ int kvs_cmd_exec(kvs_client_t *c) {
         if (kvs_cmd_get(&kvs_server, &c->cmd.key, &val) == -1) {
             /* write -1 */
             c->wpos = snprintf(c->wbuf, KVS_PROTO_SIZE, MSG_ERR);
-            return -1;
+            goto quit;
         }
 
         if (val->len < KVS_OUTPUT_SIZE - 32 + 3) {
@@ -205,7 +223,6 @@ int kvs_cmd_exec(kvs_client_t *c) {
 
     }
 
-#if 0
     if (!strncmp(c->cmd.action.p, "del", sizeof("del") - 1)) {
         if (kvs_cmd_del(&kvs_server, &c->cmd.key) == 0) {
             /* write 1 */
@@ -218,9 +235,8 @@ int kvs_cmd_exec(kvs_client_t *c) {
         }
     }
 
-#endif
-
-    kvs_log(kvs_server.log, KVS_DEBUG, "%d:::wpos = %d\n", c->cmd.flags, c->wpos);
+quit:
+    kvs_log(kvs_server.log, KVS_DEBUG, "write check:    cmd flag (%d) #buffer wpos = %d\n", c->cmd.flags, c->wpos);
     if ((c->cmd.flags & KVS_CMD_OK) && c->wpos != 0) {
         rv = kvs_ev_add(kvs_server.ev, c->fd, KVS_EV_WRITE, kvs_net_write, c);
         kvs_log(kvs_server.log, KVS_DEBUG, "call write rv = %d\n", rv);
@@ -230,23 +246,35 @@ int kvs_cmd_exec(kvs_client_t *c) {
 
 int kvs_net_read(kvs_ev_t *e, int fd, int mask, void *user_data) {
     char buf[KVS_PROTO_SIZE];
-    int  rv;
+    int  rv, cnt;
 
     kvs_log(kvs_server.log, KVS_DEBUG, "start %s\n", __func__);
     kvs_client_t *c = (kvs_client_t *)user_data;
+
+    cnt = 0;
     for (;;) {
         rv = read(fd, buf, KVS_PROTO_SIZE - 1);
-        kvs_log(kvs_server.log, KVS_DEBUG, "* %s:rv = %d errno(%s):fd(%d)\n", __func__, rv, strerror(errno), fd);
+
+        kvs_log(kvs_server.log, KVS_DEBUG, "* %s:rv = %d errno(%s):fd(%d)\n",
+                __func__, rv, strerror(errno), fd);
+
         if (rv == -1) {
             if (errno == EINTR) {
                 continue;
             }
+
+            if (cnt == 0 && errno == EAGAIN) {
+                return 0;
+            }
+
             break;
         }
+
         if (rv == 0) {
             break;
         }
 
+        cnt += rv;
         kvs_buf_append(&c->rbuf, buf, rv);
         kvs_log(kvs_server.log, KVS_DEBUG, "read buf is %s:len(%d)\n", c->rbuf.p, c->rbuf.len);
     }
@@ -254,7 +282,7 @@ int kvs_net_read(kvs_ev_t *e, int fd, int mask, void *user_data) {
     kvs_net_unmarshal(c);
     kvs_cmd_exec(c);
 
-    kvs_log(kvs_server.log, KVS_DEBUG, "read rv = 0\n");
+    kvs_log(kvs_server.log, KVS_DEBUG, "read rv = %d\n", rv);
     if (rv == 0) {
         kvs_ev_del(kvs_server.ev, c->fd, KVS_EV_READ|KVS_EV_WRITE, kvs_net_write, c);
         close(fd);

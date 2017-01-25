@@ -35,7 +35,7 @@ struct kvs_str_t {
 
 #define kvs_buf_dsize 512
 
-#define kvs_buf_len(b) b->len
+#define kvs_buf_len(b) (b)->len
 
 #define kvs_buf_null(b) (b)->p = NULL; (b)->len = 0; (b)->alloc = 0; (b)->flag = IS_BUF;
 
@@ -53,6 +53,7 @@ int kvs_buf_append(kvs_buf_t *b, const char *p, int len);
 
 int kvs_buf_append_sprintf(kvs_buffer_t *b, const char *fmt, ...);
 
+int kvs_buf_truncate(kvs_buf_t *b, int n);
 #ifdef __cplusplus
 }
 #endif

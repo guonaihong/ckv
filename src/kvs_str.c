@@ -23,6 +23,27 @@ void kvs_str_free(kvs_str_t *s) {
     free(s);
 }
 
+int kvs_buf_truncate(kvs_buf_t *b, int n) {
+    kvs_buffer_t *buffer;
+
+    buffer = (kvs_buffer_t *)b;
+
+    if (n < 0) {
+        return -1;
+    }
+
+    if (buffer->flag == IS_BUFFER && buffer->p == buffer->buf) {
+        if (n > (long)sizeof(buffer->buf)) {
+            return -1;
+        }
+
+    }
+
+    memmove(b->p, b->p + n, buffer->len - n);
+    buffer->len -= n;
+    return 0;
+}
+
 int kvs_buf_append(kvs_buf_t *b, const char *p, int len) {
 
     int           needlen;

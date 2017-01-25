@@ -66,11 +66,15 @@ int kvs_cli_send(kvs_cli_t *c, kvs_cmd_t *cmd) {
     return marshal(c, cmd);
 }
 
+int kvs_cli_recv(kvs_cli_t *c, char *rsp, int rsp_len) {
+    return read(c->fd, rsp, rsp_len);
+}
+
 int main(int argc, char **argv) {
     char line[1024];
     int  rv;
 
-    kvs_cli_t *c = kvs_cli_new("0", "56789");
+    kvs_cli_t *c = kvs_cli_new("0", "56780");
     if (c == NULL) {
         return 1;
     }
@@ -110,6 +114,30 @@ int main(int argc, char **argv) {
             if (kvs_cli_send(c, &cmd) == -1) {
                 printf("send data fail\n");
             }
+
+            rv = kvs_cli_recv(c, val, sizeof(val));
+            char *p = NULL;
+            if (rv > 1) {
+                if (val[0] == '$') {
+                    strtoul(val + 1, &p, 10);
+                    if (*p == '\r') {
+                        p++;
+                        rv--;
+                    }
+
+                    if (*p == '\n') {
+                        p++;
+                        rv--;
+                    }
+                    rv -= val - p;
+                } else {
+                    p = val + 1;
+                    rv -= 1;
+                }
+                p[rv] = '\0';
+                printf("\"%s\"\n", p);
+            }
+            val[0] = '\0';
         }
 
     }
