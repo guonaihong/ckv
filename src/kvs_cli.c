@@ -74,7 +74,7 @@ int main(int argc, char **argv) {
     char line[1024];
     int  rv;
 
-    kvs_cli_t *c = kvs_cli_new("0", "56780");
+    kvs_cli_t *c = kvs_cli_new("0", "56789");
     if (c == NULL) {
         return 1;
     }
@@ -116,25 +116,31 @@ int main(int argc, char **argv) {
             }
 
             rv = kvs_cli_recv(c, val, sizeof(val));
-            char *p = NULL;
+
+            char *p    = NULL;
+            char *last = NULL;
             if (rv > 1) {
                 if (val[0] == '$') {
-                    strtoul(val + 1, &p, 10);
-                    if (*p == '\r') {
-                        p++;
-                        rv--;
-                    }
+                    rv = strtoul(val + 1, &p, 10);
 
-                    if (*p == '\n') {
-                        p++;
-                        rv--;
-                    }
-                    rv -= val - p;
+                    if (*p == '\r') p++;
+
+                    if (*p == '\n') p++;
+
                 } else {
                     p = val + 1;
+
+                    last = strchr(p, '\r');
+                    if (last != NULL) *last = '\0';
+
                     rv -= 1;
                 }
-                p[rv] = '\0';
+
+                if (rv == -1) {
+                    strcpy(p, "nil");
+                } else {
+                    p[rv] = '\0';
+                }
                 printf("\"%s\"\n", p);
             }
             val[0] = '\0';
