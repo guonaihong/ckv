@@ -1,6 +1,7 @@
 #ifndef __KVS_STR_H
 #define __KVS_STR_H
 
+#include <stdio.h>
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -16,12 +17,14 @@ struct kvs_buf_t {
     int   flag;
 };
 
+#define kvs_buf_dsize 64
+
 struct kvs_buffer_t {
     char *p;
     int   len;
     int   alloc;
     int   flag;
-    char  buf[128];
+    char  buf[kvs_buf_dsize];
 };
 
 struct kvs_str_t {
@@ -32,8 +35,6 @@ struct kvs_str_t {
 #define IS_BUF 0x0
 
 #define IS_BUFFER 0x1
-
-#define kvs_buf_dsize 512
 
 #define kvs_buf_len(b) (b)->len
 
@@ -54,6 +55,12 @@ int kvs_buf_append(kvs_buf_t *b, const char *p, int len);
 int kvs_buf_append_sprintf(kvs_buffer_t *b, const char *fmt, ...);
 
 int kvs_buf_truncate(kvs_buf_t *b, int n);
+
+int kvs_buf_getrange(kvs_buffer_t *b, int start, int end, kvs_str_t *out);
+
+int kvs_buf_setrange(kvs_buffer_t *b, int offset, const char *p, int len);
+
+void kvs_buf_free(kvs_buf_t *b);
 #ifdef __cplusplus
 }
 #endif

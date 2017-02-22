@@ -44,32 +44,36 @@ int kvs_buf_truncate(kvs_buf_t *b, int n) {
     return 0;
 }
 
-int kvs_buf_append(kvs_buf_t *b, const char *p, int len) {
-
+int kvs_buf_setrange(kvs_buffer_t *b, int offset, const char *p, int len) {
     int           needlen;
     char         *np;
     kvs_buffer_t *buffer;
 
-    needlen = kvs_buf_dsize > len ? kvs_buf_dsize : len;
+    if (offset < 0) {
+        return -1;
+    }
+
+    needlen = kvs_buf_dsize > offset + len + 1 ? kvs_buf_dsize : offset + len + 1;
     buffer  = (kvs_buffer_t *)b;
 
     if (b->p == NULL) {
 
         b->len   = 0;
-        b->alloc = needlen + 1;
+        b->alloc = needlen;
 
-        if (b->flag == IS_BUFFER && b->alloc < (long)sizeof(buffer->buf)) {
+        if (b->flag == IS_BUFFER) {
 
             b->p     = buffer->buf;
             b->alloc = sizeof(buffer->buf);
 
         } else {
 
-            b->p     = (char *)malloc(needlen + 1);
+            b->p     = (char *)malloc(needlen);
         }
     }
 
-    needlen = b->len + len + 1;
+    //needlen = b->len + len + 1;
+    needlen = offset + len + 1;
     if (needlen > b->alloc) {
 
         if (needlen < 2 * b->alloc) {
@@ -82,7 +86,7 @@ int kvs_buf_append(kvs_buf_t *b, const char *p, int len) {
                 return -1;
             }
 
-            memcpy(b->p, buffer->buf, b->len);
+            memcpy(np, buffer->buf, b->len);
         } else {
 
             np = realloc(b->p, needlen);
@@ -95,10 +99,20 @@ int kvs_buf_append(kvs_buf_t *b, const char *p, int len) {
         b->alloc = needlen;
     }
 
-    memcpy(b->p + b->len, p, len);
-    b->len += len;
-    b->p[b->len] = '\0';
+    memcpy(b->p + offset, p, len);
+
+    if(b->len < offset) {
+        memset(b->p + b->len, '\0', offset - b->len);
+    }
+
+    b->len = offset + len;
+    b->p[offset + len] = '\0';
+    //b->p[b->len] = '\0';
     return 0;
+}
+
+int kvs_buf_append(kvs_buf_t *b, const char *p, int len) {
+    return kvs_buf_setrange((kvs_buffer_t *)b, b->len, p, len);
 }
 
 int kvs_buf_append_sprintf(kvs_buffer_t *b, const char *fmt, ...) {
@@ -155,4 +169,55 @@ int kvs_buf_append_sprintf(kvs_buffer_t *b, const char *fmt, ...) {
     }
 
     return 0;
+}
+
+int kvs_buf_getrange(kvs_buffer_t *b, int start, int end, kvs_str_t *out) {
+
+    if (start < 0) {
+        start = b->len + start;
+    }
+
+    if (end < 0) {
+        end   = b->len + end;
+    }
+
+    if (start > end) {
+        goto empty;
+    }
+
+    if (start >= b->len) {
+        goto empty;
+    }
+
+    if (end >= b->len) {
+        end = b->len - 1;
+    }
+
+    out->len = end - start + 1;
+    //TODO: Better memory usage strategy
+    out->p   = malloc(out->len + 1);
+    if (out->p == NULL) {
+        return -1;
+    }
+
+    memcpy(out->p, b->p + start, out->len);
+    out->p[out->len] = '\0';
+    return 0;
+
+empty:
+    out->p   = strdup("");
+    out->len = 1;
+    return 0;
+}
+
+void kvs_buf_free(kvs_buf_t *b) {
+    kvs_buffer_t *buffer;
+
+    buffer = (kvs_buffer_t *)b;
+
+    if (buffer->flag == IS_BUFFER && buffer->p == buffer->buf) {
+        return;
+    }
+
+    free(buffer->p);
 }

@@ -60,6 +60,10 @@ kvs_client_t *kvs_client_new(int fd) {
     return c;
 }
 
+void kvs_client_free(kvs_client_t *c) {
+    kvs_buf_free(&c->rbuf);
+}
+
 void kvs_cmd_reset(kvs_cmd_t *cmd) {
     kvs_str_null(&cmd->action);
     kvs_str_null(&cmd->key);
@@ -165,6 +169,7 @@ int kvs_net_write(kvs_ev_t *e, int fd, int mask, void *user_data) {
             if (errno == EINTR) {
                 continue;
             }
+
             return -1;
         }
 
@@ -231,7 +236,7 @@ int kvs_cmd_exec(kvs_client_t *c) {
         } else {
             memcpy(c->wbuf, MSG_FALSE, sizeof(MSG_FALSE) - 1);
             c->wpos = sizeof(MSG_FALSE) -1;
-        /* write 0 */
+            /* write 0 */
         }
     }
 
@@ -285,6 +290,7 @@ int kvs_net_read(kvs_ev_t *e, int fd, int mask, void *user_data) {
     kvs_log(kvs_server.log, KVS_DEBUG, "read rv = %d\n", rv);
     if (rv == 0) {
         kvs_ev_del(kvs_server.ev, c->fd, KVS_EV_READ|KVS_EV_WRITE, kvs_net_write, c);
+        kvs_client_free(c);
         close(fd);
     }
     return 0;
