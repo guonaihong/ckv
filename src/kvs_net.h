@@ -32,6 +32,8 @@ kvs_client_t *kvs_client_new(int fd);
 
 #define KVS_CMD_OK      0x1
 #define KVS_CMD_UNUSED  0
+#define KVS_PROTO_SIZE 4096
+
 #ifdef __cplusplus
 }
 #endif

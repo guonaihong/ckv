@@ -5,13 +5,13 @@
 extern "C" {
 #endif
 
-#define KVS_OBJ_STR    0
+#define KVS_OBJ_BUF    0
 #define KVS_OBJ_LIST   1
 
-struct kvs_obj_t {
+typedef struct kvs_obj_t {
     unsigned type;
     void    *ptr;
-};
+} kvs_obj_t;
 
 #ifdef __cplusplus
 }

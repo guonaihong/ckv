@@ -77,5 +77,5 @@ int kvs_list_del(kvs_list_t *list, kvs_list_node_t *n) {
     return 0;
 }
 
-void kvs_list_free() {
+void kvs_list_free(kvs_list_t *list) {
 }

@@ -30,6 +30,8 @@ int kvs_list_add_tail(kvs_list_t *list, void *val);
 
 int kvs_list_del(kvs_list_t *list, kvs_list_node_t *n);
 
+void kvs_list_free(kvs_list_t *list);
+
 #define kvs_list_head_init(head) \
  do {(head)->prev = head; (head)->next = head;}while(0)
 

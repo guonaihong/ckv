@@ -50,6 +50,8 @@ kvs_str_t *kvs_str_new(const char *p, size_t len);
 
 void kvs_str_free(kvs_str_t *s);
 
+kvs_buf_t *kvs_buf_new(const char *p, size_t len);
+
 int kvs_buf_append(kvs_buf_t *b, const char *p, int len);
 
 int kvs_buf_append_sprintf(kvs_buffer_t *b, const char *fmt, ...);

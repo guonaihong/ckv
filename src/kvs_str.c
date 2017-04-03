@@ -23,6 +23,22 @@ void kvs_str_free(kvs_str_t *s) {
     free(s);
 }
 
+kvs_buf_t *kvs_buf_new(const char *p, size_t len) {
+    kvs_buf_t *b = malloc(sizeof(kvs_buf_t));
+    if (b == NULL) {
+        return NULL;
+    }
+
+    b->p      = malloc(len + 1);
+    b->len    = len;
+    b->flag   = IS_BUF;
+    b->alloc  = len + 1;
+    b->p[len] = '\0';
+
+    memcpy(b->p, p, len);
+    return b;
+}
+
 int kvs_buf_truncate(kvs_buf_t *b, int n) {
     kvs_buffer_t *buffer;
 
