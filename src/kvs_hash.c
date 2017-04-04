@@ -227,12 +227,12 @@ int kvs_hash_resize(kvs_hash_t *h, int new_size) {
     return 0;
 }
 
-kvs_hash_node_t *kvs_hash_find(kvs_hash_t *h, const void *k, size_t klen) {
+void *kvs_hash_find(kvs_hash_t *h, const void *k, size_t klen) {
 
     kvs_hash_node_t **pp;
     pp = kvs_hash_find_core(h, k, &klen, NULL, NULL);
-    if (pp != NULL) {
-        return *pp;
+    if (pp != NULL && *pp != NULL) {
+        return (*pp)->val;
     }
     return NULL;
 }

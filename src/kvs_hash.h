@@ -33,7 +33,8 @@ typedef struct kvs_hash_t {
 kvs_hash_t *kvs_hash_new(int hint);
 int kvs_hash_del(kvs_hash_t *h, const void *k, size_t klen, void **v);
 int kvs_hash_add(kvs_hash_t *h, const void *k, size_t klen, void **v);
-kvs_hash_node_t *kvs_hash_find(kvs_hash_t *h, const void *k, size_t klen);
+void *kvs_hash_find(kvs_hash_t *h, const void *k, size_t klen);
+void kvs_hash_free(kvs_hash_t *h, void (*myfree)(void *));
 
 #ifdef __cplusplus
 }

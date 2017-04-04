@@ -14,7 +14,7 @@ kvs_client_t *kvs_client_new(int fd) {
     }
     c->fd = fd;
     kvs_buf_null(&c->rbuf);
-    c->cmd.flags = KVS_CMD_UNUSED;
+    c->argv.flags = KVS_CMD_UNUSED;
     c->wpos      = 0;
     return c;
 }
@@ -23,18 +23,18 @@ void kvs_client_free(kvs_client_t *c) {
     kvs_buf_free(&c->rbuf);
 }
 
-void kvs_cmd_reset(kvs_cmd_t *cmd) {
-    kvs_str_null(&cmd->action);
-    kvs_str_null(&cmd->key);
-    kvs_str_null(&cmd->val);
-    cmd->flags = KVS_CMD_UNUSED;
+void kvs_cmd_reset(kvs_cmd_t *argv) {
+    kvs_str_null(&argv->action);
+    kvs_str_null(&argv->key);
+    kvs_str_null(&argv->val);
+    argv->flags = KVS_CMD_UNUSED;
 }
 
 void kvs_client_reset(kvs_client_t *c) {
 
     c->pos  = 0;
     c->wpos = 0;
-    kvs_cmd_reset(&c->cmd);
+    kvs_cmd_reset(&c->argv);
 }
 
 int kvs_net_unmarshal(kvs_client_t *c) {
@@ -75,23 +75,23 @@ int kvs_net_unmarshal(kvs_client_t *c) {
             if (*last == '\r') i++;
             if (last[1] == '\n') i++;
 
-            if (c->cmd.action.len == 0) {
+            if (c->argv.action.len == 0) {
 
                 kvs_log(kvs_server.log, KVS_DEBUG, "nhead = %d\n", nhead);
-                c->cmd.action.p   = p + i;
-                c->cmd.action.len = nhead;
+                c->argv.action.p   = p + i;
+                c->argv.action.len = nhead;
 
-                kvs_log(kvs_server.log, KVS_DEBUG, "set cmd\n");
-            } else if (c->cmd.key.len == 0) {
-                c->cmd.key.p   = p + i;
-                c->cmd.key.len = nhead;
+                kvs_log(kvs_server.log, KVS_DEBUG, "set argv\n");
+            } else if (c->argv.key.len == 0) {
+                c->argv.key.p   = p + i;
+                c->argv.key.len = nhead;
 
                 kvs_log(kvs_server.log, KVS_DEBUG, "set key\n");
-            } else if (c->cmd.val.len == 0) {
-                c->cmd.val.p   = p + i;
-                c->cmd.val.len = nhead;
-                c->cmd.flags |= KVS_CMD_OK;
-                kvs_log(kvs_server.log, KVS_DEBUG, "%d:### set val\n", c->cmd.flags);
+            } else if (c->argv.val.len == 0) {
+                c->argv.val.p   = p + i;
+                c->argv.val.len = nhead;
+                c->argv.flags |= KVS_CMD_OK;
+                kvs_log(kvs_server.log, KVS_DEBUG, "%d:### set val\n", c->argv.flags);
 
             }
             if (i + nhead < len) {
@@ -101,7 +101,7 @@ int kvs_net_unmarshal(kvs_client_t *c) {
             if (p[i] == '\r') i++;
             if (p[i] == '\n') i++;
 
-            if (c->cmd.flags & KVS_CMD_OK) {
+            if (c->argv.flags & KVS_CMD_OK) {
                 kvs_buf_truncate(&c->rbuf, i);
                 return 0;
             }
@@ -143,26 +143,6 @@ int kvs_net_write(kvs_ev_t *e, int fd, int mask, void *user_data) {
     return cn;
 }
 
-int kvs_cmd_exec(kvs_client_t *c) {
-    kvs_log(kvs_server.log, KVS_DEBUG, "%s:flag = %d\n", __func__, c->cmd.flags);
-    if (!(c->cmd.flags & KVS_CMD_OK))
-        return EAGAIN;
-
-    kvs_str_t *val;
-    int        rv;
-
-    val = NULL;
-
-    //if (!strncmp(c->cmd.action.p, "set", sizeof("set") - 1))
-
-    kvs_log(kvs_server.log, KVS_DEBUG, "write check:    cmd flag (%d) #buffer wpos = %d\n", c->cmd.flags, c->wpos);
-    if ((c->cmd.flags & KVS_CMD_OK) && c->wpos != 0) {
-        rv = kvs_ev_add(kvs_server.ev, c->fd, KVS_EV_WRITE, kvs_net_write, c);
-        kvs_log(kvs_server.log, KVS_DEBUG, "call write rv = %d\n", rv);
-    }
-    return 0;
-}
-
 int kvs_net_read(kvs_ev_t *e, int fd, int mask, void *user_data) {
     char buf[KVS_PROTO_SIZE];
     int  rv, cnt;
@@ -199,7 +179,7 @@ int kvs_net_read(kvs_ev_t *e, int fd, int mask, void *user_data) {
     }
 
     kvs_net_unmarshal(c);
-    kvs_cmd_exec(c);
+    kvs_command_process(c);
 
     kvs_log(kvs_server.log, KVS_DEBUG, "read rv = %d\n", rv);
     if (rv == 0) {

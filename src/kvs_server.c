@@ -14,6 +14,7 @@
 #include "kvs_ev.h"
 #include "kvs_common.h"
 #include "kvs_sock.h"
+#include "kvs_command.h"
 
 
 static int socket_non_blocking(int sfd) {
@@ -103,9 +104,17 @@ int main(int argc, char **argv) {
         return 1;
     }
     kvs_log(log, KVS_DEBUG, "cycle start\n");
+
+    kvs_command_init();
+
     kvs_ev_cycle(kvs_server.ev, NULL);
+
     kvs_ev_free(kvs_server.ev);
+
     kvs_log(log, KVS_DEBUG, "bye bye ..\n");
+
     kvs_log_free(log);
+
+    kvs_command_free();
     return 0;
 }
