@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <unistd.h>
 #include "kvs_str.h"
 
 #define TEST_STR "hello, my friend"
@@ -56,10 +57,30 @@ void setrange_tst() {
     kvs_buf_free((kvs_buf_t *)&buf);
 }
 
+void strs_split_tst() {
+    printf("start test\n");
+    kvs_strs_t strs;
+
+    kvs_strs_init(&strs);
+
+    const char *p = "1235 5678 91011 aaa bbb ccc ddd";
+
+    kvs_strs_split(&strs, p, " ", 0);
+
+    int i, len;
+    printf("printf split result\n");
+    for (i = 0, len = strs.argc; i < len; i++) {
+        write(0, strs.argv[i].p, strs.argv[i].len);
+        printf("(%d)\n", strs.argv[i].len);
+    }
+}
+
 int main() {
 
-    getrange_tst();
+    //getrange_tst();
 
-    setrange_tst();
+    //setrange_tst();
+    
+    strs_split_tst();
     return 0;
 }

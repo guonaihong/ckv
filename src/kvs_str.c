@@ -237,3 +237,69 @@ void kvs_buf_free(kvs_buf_t *b) {
 
     free(buffer->p);
 }
+
+void kvs_strs_init(kvs_strs_t *strs) {
+    strs->argv  = NULL;
+    strs->argc  = 0;
+    strs->alloc = 0;
+}
+
+kvs_strs_t *kvs_strs_new() {
+    kvs_strs_t *strs = malloc(sizeof(kvs_strs_t));
+    if (strs == NULL) {
+        return NULL;
+    }
+
+    kvs_strs_init(strs);
+    return strs;
+}
+
+int kvs_strs_split(kvs_strs_t *strs, const char *s, const char *dem, int flags) {
+
+    char *p   = (char *)s, *last;
+    void *tmp = NULL;
+
+    for (; *p;) {
+
+        p += strspn(s, dem);
+
+        last = p + strcspn(p, dem);
+
+        if (strs->argc >= strs->alloc) {
+            tmp = realloc(strs->argv, sizeof(kvs_str_t) * (strs->alloc * 2 + 1));
+            if (tmp == NULL) {
+                return -1;
+            }
+            strs->argv   = tmp;
+            strs->alloc *= 2;
+        }
+
+        if (flags == 0) {
+
+            strs->argv[strs->argc].p = p;
+            strs->argv[strs->argc++].len = last - p;
+
+        } else if(flags == KVS_STRS_ALLOC) {
+
+            strs->argv[strs->argc].p = strndup(p, last - p + 1);
+            strs->argv[strs->argc].len = last - p;
+            strs->argv[strs->argc++].p[last - p] = '\0';
+
+        }
+
+        p = last + 1;
+        if (!*last) {
+            break;
+        }
+    }
+    return strs->argc;
+}
+
+void kvs_strs_reset(kvs_strs_t *strs) {
+    strs->argc = 0;
+}
+
+void kvs_strs_free(kvs_strs_t *strs) {
+    free(strs->argv);
+    free(strs);
+}

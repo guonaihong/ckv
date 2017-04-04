@@ -5,11 +5,14 @@
 extern "C" {
 #endif
 
+#include "kvs_str.h"
 typedef struct kvs_cli_t kvs_cli_t;
 
 struct kvs_cli_t {
     int         fd;
     const char *port;
+    kvs_str_t  *argv;
+    int         argc;
 };
 
 #ifdef __cplusplus

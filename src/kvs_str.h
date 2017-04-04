@@ -9,6 +9,7 @@ extern "C" {
 typedef struct kvs_buf_t kvs_buf_t;
 typedef struct kvs_buffer_t kvs_buffer_t;
 typedef struct kvs_str_t kvs_str_t;
+typedef struct kvs_strs_t kvs_strs_t;
 
 struct kvs_buf_t {
     char *p;
@@ -30,6 +31,14 @@ struct kvs_buffer_t {
 struct kvs_str_t {
     char *p;
     int   len;
+};
+
+#define KVS_STRS_ALLOC 0x1
+
+struct kvs_strs_t {
+    kvs_str_t *argv;
+    int        argc;
+    int        alloc;
 };
 
 #define IS_BUF 0x0
@@ -63,6 +72,17 @@ int kvs_buf_getrange(kvs_buffer_t *b, int start, int end, kvs_str_t *out);
 int kvs_buf_setrange(kvs_buffer_t *b, int offset, const char *p, int len);
 
 void kvs_buf_free(kvs_buf_t *b);
+
+/* strs */
+void kvs_strs_init(kvs_strs_t *strs);
+
+kvs_strs_t *kvs_strs_new();
+
+int kvs_strs_split(kvs_strs_t *strs, const char *s, const char *dem, int flags);
+
+void kvs_strs_free(kvs_strs_t *strs);
+
+void kvs_strs_reset(kvs_strs_t *strs);
 #ifdef __cplusplus
 }
 #endif
