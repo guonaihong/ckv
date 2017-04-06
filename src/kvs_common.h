@@ -4,6 +4,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+#include "kvs_obj.h"
 #include "kvs_hash.h"
 #include "kvs_str.h"
 #include "kvs_ev.h"
@@ -19,30 +20,27 @@ struct kvs_server_t {
 };
 
 typedef struct kvs_command_t kvs_command_t;
-typedef struct kvs_cmd_t kvs_cmd_t;
 typedef struct kvs_client_t kvs_client_t;
 
 struct kvs_command_t {
     char *name;
     void (*cmd)(kvs_client_t *c);
-};
-
-struct kvs_cmd_t {
-    kvs_str_t action;
-    kvs_str_t key;
-    kvs_str_t val;
-    unsigned  flags;
+    int  nargs;
 };
 
 #define KVS_OUTPUT_SIZE 16 * 1024
 struct kvs_client_t {
     kvs_buf_t      rbuf;
     int            fd;
-    int            pos;
     int            nargs;
+    int            nhead;
+
     char           wbuf[KVS_OUTPUT_SIZE]; //small content values
     int            wpos;
-    kvs_cmd_t      argv;
+    kvs_obj_t    **argv;
+    int            argc;
+
+    unsigned       flags;
     kvs_command_t *command;
 };
 

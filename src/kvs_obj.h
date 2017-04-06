@@ -13,6 +13,11 @@ typedef struct kvs_obj_t {
     void    *ptr;
 } kvs_obj_t;
 
+kvs_obj_t *kvs_obj_buf_new(const char *p, size_t len);
+
+kvs_obj_t *kvs_obj_list_new();
+
+void kvs_obj_free(kvs_obj_t *o);
 #ifdef __cplusplus
 }
 #endif

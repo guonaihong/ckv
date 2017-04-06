@@ -13,7 +13,7 @@ kvs_obj_t *kvs_obj_new(int type, void *ptr) {
     return o;
 }
 
-kvs_obj_t *kvs_obj_str_new(const char *p, size_t len) {
+kvs_obj_t *kvs_obj_buf_new(const char *p, size_t len) {
 
     kvs_buf_t *s = kvs_buf_new(p, len);
     return kvs_obj_new(KVS_OBJ_BUF, s);
@@ -32,5 +32,12 @@ void kvs_obj_buf_free(kvs_obj_t *o) {
 
 void kvs_obj_list_free(kvs_obj_t *o) {
     kvs_list_free((kvs_list_t *)o->ptr);
+    free(o);
+}
+
+void kvs_obj_free(kvs_obj_t *o) {
+    if (o->type == KVS_OBJ_BUF) {
+        kvs_buf_free(o->ptr);
+    }
     free(o);
 }
