@@ -17,7 +17,7 @@ kvs_client_t *kvs_client_new(int fd) {
 
     kvs_buf_null(&c->rbuf);
     c->fd    = fd;
-    c->argv  = NULL;
+    c->argv  = NULL; //TODO free
     c->argc  = 0;
     c->nhead = 0;
     c->flags = KVS_CMD_UNUSED;

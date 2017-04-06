@@ -94,11 +94,33 @@ void kvs_command_get(kvs_client_t *c) {
     }
 }
 
-void kvs_command_del(kvs_client_t *c) {
+int kvs_cmd_append(kvs_client_t *c, kvs_buf_t *key, kvs_obj_t *val) {
 
-    if (c->argc != 2) {
-        /* TODO write error */
+    kvs_obj_t *p;
+    kvs_buf_t *b = NULL, *b1 = NULL;
+
+    p = kvs_hash_find(kvs_server.hash, key->p, key->len);
+    if (p == NULL) {
+        b = val->ptr;
+        kvs_hash_add(kvs_server.hash, key->p, (size_t)key->len, (void **)&val);
+        c->argv[2] = NULL;
+        return b->len;
     }
+
+    b  = p->ptr;
+    b1 = val->ptr;
+    kvs_buf_append(b, b1->p, b1->len);
+    return b->len;
+}
+
+void kvs_command_append(kvs_client_t *c) {
+
+    int n;
+    n = kvs_cmd_append(c, c->argv[1]->ptr, c->argv[2]);
+    c->wpos = snprintf(c->wbuf, sizeof(c->wbuf), ":%d\r\n", n);
+}
+
+void kvs_command_del(kvs_client_t *c) {
 
     if (kvs_cmd_del(&kvs_server, c->argv[1]->ptr) == 0) {
         /* write 1 */
@@ -152,7 +174,8 @@ void kvs_command_init() {
         {"lpop",  kvs_command_lpop,  2},
         {"rpop",  kvs_command_rpop,  2},
         {"lterm", kvs_command_lterm, 2},
-        {NULL, NULL, 0}
+        {"append", kvs_command_append,3},
+        {NULL, NULL, 0},
     };
 
     kvs_command_t  *c, *tmp;
@@ -182,7 +205,7 @@ int kvs_command_process(kvs_client_t *c) {
         /* todo remove event and write error message */
         kvs_log(kvs_server.log, KVS_WARN, "unknown command:%s\n", argv0->p);
     } else {
-        if (cmd->nargs < c->argc) {
+        if (c->argc < cmd->nargs) {
             /* todo write error */
             kvs_log(kvs_server.log, KVS_WARN, "The number of parameters is incorrect\n");
         }
