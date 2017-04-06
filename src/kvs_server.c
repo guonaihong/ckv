@@ -98,7 +98,11 @@ int main(int argc, char **argv) {
     kvs_log_t *log;
     log = kvs_log_new(KVS_DEBUG, basename(argv[0]), 0);
 
-    if (kvs_server_init(&kvs_server, "56789", log) == -1) {
+    char *port = "56789";
+    if (argc == 2) {
+        port = argv[1];
+    }
+    if (kvs_server_init(&kvs_server, port, log) == -1) {
         kvs_log(log, KVS_ERROR, "kvs init fail\n");
         kvs_log_free(log);
         return 1;

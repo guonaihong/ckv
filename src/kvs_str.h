@@ -47,6 +47,8 @@ struct kvs_strs_t {
 
 #define kvs_buf_len(b) (b)->len
 
+#define kvs_buf_reset(b) (b)->len = 0;
+
 #define kvs_buf_null(b) (b)->p = NULL; (b)->len = 0; (b)->alloc = 0; (b)->flag = IS_BUF;
 
 #define kvs_buffer_null(b) kvs_buf_null(b); (b)->flag = IS_BUFFER;

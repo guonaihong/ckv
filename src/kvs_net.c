@@ -8,14 +8,21 @@
 #include "kvs_common.h"
 
 kvs_client_t *kvs_client_new(int fd) {
+
     kvs_client_t *c = calloc(1, sizeof(kvs_client_t));
+
     if (c == NULL) {
         return NULL;
     }
-    c->fd = fd;
+
     kvs_buf_null(&c->rbuf);
+    c->fd    = fd;
+    c->argv  = NULL;
+    c->argc  = 0;
+    c->nhead = 0;
     c->flags = KVS_CMD_UNUSED;
-    c->wpos      = 0;
+    c->wpos  = 0;
+
     return c;
 }
 
@@ -29,7 +36,7 @@ void kvs_client_reset(kvs_client_t *c) {
     c->flags = KVS_CMD_UNUSED;
 }
 
-int kvs_net_unmarshal(kvs_client_t *c) {
+int kvs_net_parse(kvs_client_t *c) {
     char *p     = NULL;
     char *last  = NULL;
     int   nhead = 0, pos = 0;
@@ -61,7 +68,14 @@ int kvs_net_unmarshal(kvs_client_t *c) {
         /* TODO check nargc size */
         nhead = strtoul(p + pos + 1, NULL, 10);
         c->nargs = nhead;
-        pos = last - p;
+        pos = 1 + last - p;
+
+        if (c->argv) {
+            free(c->argv);
+        }
+        c->argv = malloc(sizeof(kvs_obj_t *) * c->nargs);
+
+        kvs_log(kvs_server.log, KVS_DEBUG, "nargs = %d:(%s)\n", c->nargs, p+pos);
     }
 
     while (c->nargs > 0) {
@@ -83,12 +97,18 @@ int kvs_net_unmarshal(kvs_client_t *c) {
             if (p[pos] != '$') {
                 return -1;
             }
+
             nhead = strtoul(p + pos + 1, NULL, 10);
             c->nhead = nhead;
-            pos = last - p;
+            pos = 1 + last - p;
         }
 
         c->argv[c->argc++] = kvs_obj_buf_new(p + pos, nhead);
+
+        /*debug*/
+        kvs_buf_t *buf = c->argv[c->argc - 1]->ptr;
+        kvs_log(kvs_server.log, KVS_DEBUG, "(%s)\n", buf->p);
+
         pos += c->nhead + 2;
         c->nhead = 0;
         c->nargs--;
@@ -165,11 +185,13 @@ int kvs_net_read(kvs_ev_t *e, int fd, int mask, void *user_data) {
     }
 
     if (c->rbuf.len > 0) {
-        kvs_net_unmarshal(c);
+        kvs_net_parse(c);
     }
 
-    if (c->nargs > 0) {
+    if (c->argc > 0) {
         kvs_command_process(c);
+        c->argc = 0;
+        kvs_buf_reset(&c->rbuf);
     }
 
     kvs_log(kvs_server.log, KVS_DEBUG, "read rv = %d\n", rv);

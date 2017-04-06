@@ -2,6 +2,7 @@
 # define __KVS_COMMAND_H
 
 #include "kvs_common.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif

@@ -65,10 +65,15 @@ int kvs_cli_recv(kvs_cli_t *c, char *rsp, int rsp_len) {
 }
 
 int main(int argc, char **argv) {
-    char line[1024];
-    int  rv;
+    char  line[1024];
+    int   rv;
+    char *port = "56789";
 
-    kvs_cli_t *c = kvs_cli_new("0", "56789");
+    if (argc == 2) {
+        port = argv[1];
+    }
+
+    kvs_cli_t *c = kvs_cli_new("0", port);
     if (c == NULL) {
         return 1;
     }
