@@ -7,8 +7,8 @@ key-value store and a bit like redis(一个山塞redis项目)
   * set key val
   * get key
   * del key
-  * append key val
-  
+  * append key val
+  
 * 将要实现的功能
   * 各种list类型静态方法相关命令, 比如:lpush hello 1 2 3 4 5
   * 各种string类型方法相关命令
